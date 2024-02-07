@@ -13,7 +13,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -v -o yamb
 FROM alpine:latest
 
 WORKDIR /app
-# EXPOSE 3000
 
 # dependencies: ffmpeg for audio processing
 RUN apk --no-cache add ffmpeg
