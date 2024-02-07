@@ -1,0 +1,16 @@
+networks:
+  default:
+    
+services:
+  app:
+    container_name: yamb-dev
+    build:
+      # change context to copy local repo during development
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: ruined/yamb
+    restart: unless-stopped
+    networks:
+      - default
+    env_file:
+      - app.env
