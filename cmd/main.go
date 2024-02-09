@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/ruined.yamb/v1/db"
 )
 
 var (
@@ -55,6 +56,8 @@ func init() {
 }
 
 func main() {
+	db.Init()
+
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Printf("logged in as: %v#%v", r.User.Username, r.User.Discriminator)
 	})
