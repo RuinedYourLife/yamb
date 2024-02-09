@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/ruined.yamb/v1/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -26,4 +27,8 @@ func Init() {
 	}
 
 	log.Println("connected to database")
+
+	if err := DB.AutoMigrate(&models.Artist{}); err != nil {
+		log.Fatalf("error migrating database: %v", err)
+	}
 }
