@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ruined.yamb/v1/db"
+	"github.com/ruined.yamb/v1/handlers"
 )
 
 var (
@@ -30,20 +31,21 @@ func init() {
 var (
 	commands = []*discordgo.ApplicationCommand{
 		{
-			Name:        "basic-command",
-			Description: "basic command",
+			Name:        "track",
+			Description: "Track new releases for an artist",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "spotify-url",
+					Description: "Spotify URL for the artist",
+					Required:    true,
+				},
+			},
 		},
 	}
 
 	command_handlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"basic-command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "basic command",
-				},
-			})
-		},
+		"track": handlers.TrackCommandHandler,
 	}
 )
 

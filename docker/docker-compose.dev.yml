@@ -13,6 +13,8 @@ services:
       dockerfile: docker/Dockerfile
     image: ruined/yamb-bot
     restart: unless-stopped
+    depends_on:
+      - db
     networks:
       - default
     env_file:
