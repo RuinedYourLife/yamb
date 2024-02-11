@@ -1,9 +1,12 @@
 package tasks
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/ruined.yamb/v1/models"
 	"github.com/ruined.yamb/v1/services"
 )
@@ -32,14 +35,14 @@ func CheckForNewReleases() {
 	}
 }
 
-func ProcessArtistCheckQueue() {
+func ProcessArtistCheckQueue(s *discordgo.Session) {
 	for task := range artistCheckQueue {
-		processArtistCheckTask(task)
+		processArtistCheckTask(s, task)
 		time.Sleep(time.Second)
 	}
 }
 
-func processArtistCheckTask(task ArtistCheckTask) {
+func processArtistCheckTask(s *discordgo.Session, task ArtistCheckTask) {
 	spotifyService := services.NewSpotifyService()
 	releaseService := services.NewLatestReleaseService()
 
@@ -66,6 +69,30 @@ func processArtistCheckTask(task ArtistCheckTask) {
 		err = releaseService.Update(task.ArtistID, toUpdate)
 		if err != nil {
 			log.Printf("failed to update latest release for artist id %d: %v", task.ArtistID, err)
+			return
 		}
+		postNewRelease(s, toUpdate)
+	}
+}
+
+func postNewRelease(s *discordgo.Session, release models.LatestRelease) {
+	artistService := services.NewArtistService()
+	artist, err := artistService.FindByID(release.ArtistID)
+	if err != nil {
+		log.Printf("failed to get artist for release id %d: %v", release.ID, err)
+	}
+
+	spotifyService := services.NewSpotifyService()
+	albumURL, err := spotifyService.FindAlbum(release.SpotifyID)
+	if err != nil {
+		log.Printf("failed to get album for release id %d: %v", release.ID, err)
+	}
+
+	channelID := os.Getenv("YAMB_CHANNEL_ID")
+	message := fmt.Sprintf("New release from %s: %s - %s", artist.Name, release.Name, albumURL["spotify"])
+
+	_, err = s.ChannelMessageSend(channelID, message)
+	if err != nil {
+		log.Printf("failed to send message for release id %d: %v", release.ID, err)
 	}
 }

@@ -39,7 +39,7 @@ func (rs *LatestReleaseService) IsMoreRecent(artistID uint, latestRelease models
 
 func (rs *LatestReleaseService) Update(artistID uint, latestRelease models.LatestRelease) error {
 	var currentLatestRelease models.LatestRelease
-	result := db.DB.Where("artist_id = ?", artistID).Updates(&currentLatestRelease)
+	result := db.DB.Where("artist_id = ?", artistID).First(&currentLatestRelease)
 	if result.Error != nil {
 		return result.Error
 	}

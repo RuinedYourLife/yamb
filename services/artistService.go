@@ -36,13 +36,10 @@ func (as *ArtistService) GetAll() ([]models.Artist, error) {
 	return artists, nil
 }
 
-func (as *ArtistService) FindByName(name string) (*models.Artist, error) {
+func (as *ArtistService) FindByID(id uint) (*models.Artist, error) {
 	var artist models.Artist
-	result := db.DB.Where("name = ?", name).First(&artist)
+	result := db.DB.First(&artist, id)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, result.Error
 	}
 	return &artist, nil
