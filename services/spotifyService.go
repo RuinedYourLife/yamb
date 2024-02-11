@@ -37,7 +37,7 @@ func NewSpotifyService() *SpotifyService {
 	return &SpotifyService{}
 }
 
-func GetSpotifyToken() string {
+func getSpotifyToken() string {
 	if sp.AccessToken != "" && time.Since(sp.ObtainedAt) < sp.ExpiresIn {
 		return sp.AccessToken
 	}
@@ -47,7 +47,7 @@ func GetSpotifyToken() string {
 
 	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Fatalf("error creating auth request: %v", err)
+		log.Fatalf("failed to create auth request: %v", err)
 	}
 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -87,7 +87,7 @@ func (ss *SpotifyService) ExtractSpotifyID(spotifyURL string) string {
 }
 
 func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, error) {
-	token := GetSpotifyToken()
+	token := getSpotifyToken()
 
 	url := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", spotifyID)
 	req, _ := http.NewRequest("GET", url, nil)
@@ -95,12 +95,13 @@ func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, e
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 
 	if err != nil {
 		log.Printf("failed to get artist details: %v", err)
+		resp.Body.Close()
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var artist *SpotifyArtist
 	if err := json.NewDecoder(resp.Body).Decode(&artist); err != nil {
@@ -111,8 +112,8 @@ func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, e
 	return artist, nil
 }
 
-func (ss *SpotifyService) FindLatestRelease(spotifyID string) (*SpotifyRelease, error) {
-	token := GetSpotifyToken()
+func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRelease, error) {
+	token := getSpotifyToken()
 
 	albumTypes := []string{"album", "single", "appears_on"}
 	var latestRelease *SpotifyRelease
@@ -124,12 +125,13 @@ func (ss *SpotifyService) FindLatestRelease(spotifyID string) (*SpotifyRelease, 
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
-		defer resp.Body.Close()
 
 		if err != nil {
 			log.Printf("failed to get albums: %v", err)
+			resp.Body.Close()
 			return nil, err
 		}
+		defer resp.Body.Close()
 
 		var releasesReponse struct {
 			Items []struct {
