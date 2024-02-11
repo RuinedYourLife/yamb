@@ -23,12 +23,10 @@ func Init() {
 	)
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	if err != nil {
-		log.Fatalf("error connecting to database: %v", err)
+		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	log.Println("connected to database")
-
 	if err := DB.AutoMigrate(&models.Artist{}, &models.LatestRelease{}); err != nil {
-		log.Fatalf("error migrating database: %v", err)
+		log.Fatalf("failed to migrate database: %v", err)
 	}
 }

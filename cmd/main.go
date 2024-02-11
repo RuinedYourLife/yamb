@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/ruined.yamb/v1/db"
 	"github.com/ruined.yamb/v1/handlers"
+	"github.com/ruined.yamb/v1/tasks"
 )
 
 var (
@@ -42,10 +43,15 @@ var (
 				},
 			},
 		},
+		{
+			Name:        "scan",
+			Description: "Scan for new releases for all artists",
+		},
 	}
 
 	command_handlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"track": handlers.TrackCommandHandler,
+		"scan":  handlers.ScanCommandHandler,
 	}
 )
 
@@ -61,14 +67,13 @@ func main() {
 	db.Init()
 
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("logged in as: %v#%v", r.User.Username, r.User.Discriminator)
+		log.Printf("[+] logged in as: %v#%v", r.User.Username, r.User.Discriminator)
 	})
 	err := s.Open()
 	if err != nil {
 		log.Fatalf("unable to open the session: %v", err)
 	}
 
-	log.Println("adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
 		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, *GuildID, v)
@@ -78,10 +83,14 @@ func main() {
 		registeredCommands[i] = cmd
 	}
 
+	go tasks.ProcessArtistCheckQueue()
+	cronScheduler := tasks.SetupCronJobs()
+
 	defer s.Close()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	log.Println("bot is now running (ctrl+c to exit)")
 	<-stop
+
+	cronScheduler.Stop()
 }
