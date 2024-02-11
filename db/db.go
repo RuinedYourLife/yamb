@@ -28,7 +28,7 @@ func Init() {
 
 	log.Println("connected to database")
 
-	if err := DB.AutoMigrate(&models.Artist{}); err != nil {
+	if err := DB.AutoMigrate(&models.Artist{}, &models.LatestRelease{}); err != nil {
 		log.Fatalf("error migrating database: %v", err)
 	}
 }
