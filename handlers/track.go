@@ -5,6 +5,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ruined.yamb/v1/services"
+	"github.com/ruined.yamb/v1/yamberrors"
 )
 
 func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -37,10 +38,16 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	artistService := services.NewArtistService()
 	artistID, err := artistService.Create(artistDetails.Name, artistDetails.SpotifyID)
 	if err != nil {
+		content := "Could not register artist."
+		switch e := err.(type) {
+		case *yamberrors.AlreadyTrackedError:
+			content = e.Error()
+		}
+
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Could not register artist.",
+				Content: content,
 			},
 		})
 		return

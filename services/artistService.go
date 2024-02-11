@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruined.yamb/v1/db"
 	"github.com/ruined.yamb/v1/models"
+	"github.com/ruined.yamb/v1/yamberrors"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +19,9 @@ func (as *ArtistService) Create(name, spotifyID string) (uint, error) {
 	artist := models.Artist{Name: name, SpotifyID: spotifyID}
 	result := db.DB.Create(&artist)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return 0, &yamberrors.AlreadyTrackedError{Entity: name}
+		}
 		return 0, result.Error
 	}
 	return artist.ID, nil
