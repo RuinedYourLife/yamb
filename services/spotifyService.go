@@ -19,6 +19,12 @@ type SpotifyArtist struct {
 	SpotifyID string `json:"id"`
 }
 
+type SpotifyRelease struct {
+	Name        string
+	ReleaseDate time.Time
+	SpotifyID   string
+}
+
 type SpotifyAuth struct {
 	AccessToken string
 	ExpiresIn   time.Duration
@@ -89,15 +95,66 @@ func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, e
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
 	defer resp.Body.Close()
 
-	var artist SpotifyArtist
-	if err := json.NewDecoder(resp.Body).Decode(&artist); err != nil {
+	if err != nil {
+		log.Printf("failed to get artist details: %v", err)
 		return nil, err
 	}
 
-	return &artist, nil
+	var artist *SpotifyArtist
+	if err := json.NewDecoder(resp.Body).Decode(&artist); err != nil {
+		log.Printf("failed to decode artist details: %v", err)
+		return nil, err
+	}
+
+	return artist, nil
+}
+
+func (ss *SpotifyService) FindLatestRelease(spotifyID string) (*SpotifyRelease, error) {
+	token := GetSpotifyToken()
+
+	albumTypes := []string{"album", "single", "appears_on"}
+	var latestRelease *SpotifyRelease
+
+	for _, albumType := range albumTypes {
+		url := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums?include_groups=%s&limit=1", spotifyID, albumType)
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("Authorization", "Bearer "+token)
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		defer resp.Body.Close()
+
+		if err != nil {
+			log.Printf("failed to get albums: %v", err)
+			return nil, err
+		}
+
+		var releasesReponse struct {
+			Items []struct {
+				Name        string `json:"name"`
+				ReleaseDate string `json:"release_date"`
+				SpotifyID   string `json:"id"`
+			} `json:"items"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&releasesReponse); err != nil {
+			log.Printf("failed to decode album response: %v", err)
+			return nil, err
+		}
+
+		if len(releasesReponse.Items) > 0 {
+			releaseDate, _ := time.Parse("2006-01-02", releasesReponse.Items[0].ReleaseDate)
+			if latestRelease == nil || releaseDate.After(latestRelease.ReleaseDate) {
+				latestRelease = &SpotifyRelease{
+					Name:        releasesReponse.Items[0].Name,
+					ReleaseDate: releaseDate,
+					SpotifyID:   releasesReponse.Items[0].SpotifyID,
+				}
+			}
+		}
+	}
+
+	return latestRelease, nil
 }
