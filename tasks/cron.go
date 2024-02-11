@@ -7,7 +7,7 @@ import (
 )
 
 func SetupCronJobs() *cron.Cron {
-	c := cron.New()
+	c := cron.New(cron.WithSeconds())
 
 	_, err := c.AddFunc("0 0 9 * * *", CheckForNewReleases)
 
