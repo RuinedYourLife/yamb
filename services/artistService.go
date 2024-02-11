@@ -27,6 +27,15 @@ func (as *ArtistService) Create(name, spotifyID string) (uint, error) {
 	return artist.ID, nil
 }
 
+func (as *ArtistService) GetAll() ([]models.Artist, error) {
+	var artists []models.Artist
+	result := db.DB.Find(&artists)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return artists, nil
+}
+
 func (as *ArtistService) FindByName(name string) (*models.Artist, error) {
 	var artist models.Artist
 	result := db.DB.Where("name = ?", name).First(&artist)
