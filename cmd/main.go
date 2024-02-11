@@ -84,7 +84,7 @@ func main() {
 	}
 
 	go tasks.ProcessArtistCheckQueue(s)
-	cronScheduler := tasks.SetupCronJobs()
+	cronScheduler := tasks.SetupCronJob()
 
 	defer s.Close()
 

@@ -6,7 +6,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-func SetupCronJobs() *cron.Cron {
+func SetupCronJob() *cron.Cron {
 	c := cron.New(cron.WithSeconds())
 
 	_, err := c.AddFunc("0 0 9 * * *", CheckForNewReleases)
