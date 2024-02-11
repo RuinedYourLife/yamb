@@ -98,7 +98,6 @@ func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, e
 
 	if err != nil {
 		log.Printf("failed to get artist details: %v", err)
-		resp.Body.Close()
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -128,7 +127,6 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 
 		if err != nil {
 			log.Printf("failed to get albums: %v", err)
-			resp.Body.Close()
 			return nil, err
 		}
 		defer resp.Body.Close()
@@ -159,4 +157,32 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 	}
 
 	return latestRelease, nil
+}
+
+func (ss *SpotifyService) FindAlbum(spotifyID string) (map[string]string, error) {
+	token := getSpotifyToken()
+
+	url := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", spotifyID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Printf("failed to get track: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var track struct {
+		ExternalURL map[string]string `json:"external_urls"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&track); err != nil {
+		log.Printf("failed to decode track: %v", err)
+		return nil, err
+	}
+
+	return track.ExternalURL, nil
 }

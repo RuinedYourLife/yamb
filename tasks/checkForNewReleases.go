@@ -82,9 +82,14 @@ func postNewRelease(s *discordgo.Session, release models.LatestRelease) {
 		log.Printf("failed to get artist for release id %d: %v", release.ID, err)
 	}
 
+	spotifyService := services.NewSpotifyService()
+	albumURL, err := spotifyService.FindAlbum(release.SpotifyID)
+	if err != nil {
+		log.Printf("failed to get album for release id %d: %v", release.ID, err)
+	}
+
 	channelID := os.Getenv("YAMB_CHANNEL_ID")
-	// todo: send link to release instead of date
-	message := fmt.Sprintf("New release from %s: %s - %s", artist.Name, release.Name, release.ReleaseDate)
+	message := fmt.Sprintf("New release from %s: %s - %s", artist.Name, release.Name, albumURL["spotify"])
 
 	_, err = s.ChannelMessageSend(channelID, message)
 	if err != nil {
