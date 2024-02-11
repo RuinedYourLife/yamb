@@ -83,7 +83,7 @@ func main() {
 		registeredCommands[i] = cmd
 	}
 
-	go tasks.ProcessArtistCheckQueue()
+	go tasks.ProcessArtistCheckQueue(s)
 	cronScheduler := tasks.SetupCronJobs()
 
 	defer s.Close()
