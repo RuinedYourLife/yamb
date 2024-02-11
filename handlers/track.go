@@ -24,7 +24,7 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	latestRelease, err := spotifyService.FindLatestRelease(spotifyID)
+	latestRelease, err := spotifyService.FindArtistLatestRelease(spotifyID)
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
