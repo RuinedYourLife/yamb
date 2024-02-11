@@ -21,7 +21,7 @@ func Init() {
 		os.Getenv("YAMB_PQPASSWORD"),
 		"yamb",
 	)
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	if err != nil {
 		log.Fatalf("error connecting to database: %v", err)
 	}
