@@ -8,7 +8,7 @@ import (
 )
 
 func ScanCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	go tasks.CheckForNewReleases()
+	go tasks.ScanForReleases()
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

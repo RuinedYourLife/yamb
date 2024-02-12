@@ -6,15 +6,20 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-func SetupCronJob() *cron.Cron {
-	c := cron.New(cron.WithSeconds())
+var (
+	c = cron.New(cron.WithSeconds())
+)
 
-	_, err := c.AddFunc("0 0 9 * * *", CheckForNewReleases)
+func SetupCronJob() {
+	_, err := c.AddFunc("0 0 9 * * *", ScanForReleases)
 
 	if err != nil {
 		log.Fatalf("failed to add cron job: %v", err)
 	}
 
 	c.Start()
-	return c
+}
+
+func StopCronJob() {
+	c.Stop()
 }

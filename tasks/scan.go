@@ -18,7 +18,7 @@ type ArtistCheckTask struct {
 
 var artistCheckQueue = make(chan ArtistCheckTask, 100)
 
-func CheckForNewReleases() {
+func ScanForReleases() {
 	artistService := services.NewArtistService()
 
 	artists, err := artistService.GetAll()
