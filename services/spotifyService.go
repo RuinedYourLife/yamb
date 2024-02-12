@@ -77,60 +77,39 @@ func getSpotifyToken() string {
 	return sp.AccessToken
 }
 
-func (ss *SpotifyService) ExtractSpotifyID(spotifyURL string) string {
-	re := regexp.MustCompile(`spotify\.com/artist/([0-9a-zA-Z]+)`)
-	matches := re.FindStringSubmatch(spotifyURL)
-	if len(matches) > 1 {
-		return matches[1]
-	}
-	return ""
-}
-
-func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, error) {
+func (ss *SpotifyService) makeSpotifyRequest(endpoint string, result interface{}) error {
 	token := getSpotifyToken()
 
-	url := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", spotifyID)
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest("GET", "https://api.spotify.com/v1/"+endpoint, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("failed to get artist details: %v", err)
-		return nil, err
+		log.Printf("failed to execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var artist *SpotifyArtist
-	if err := json.NewDecoder(resp.Body).Decode(&artist); err != nil {
-		log.Printf("failed to decode artist details: %v", err)
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return nil
+}
+
+func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, error) {
+	var artist SpotifyArtist
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("artists/%s", spotifyID), &artist); err != nil {
 		return nil, err
 	}
 
-	return artist, nil
+	return &artist, nil
 }
 
 func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRelease, error) {
-	token := getSpotifyToken()
-
 	albumTypes := []string{"album", "single", "appears_on"}
-	var latestRelease *SpotifyRelease
+	var latestRelease SpotifyRelease
 
 	for _, albumType := range albumTypes {
-		url := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums?include_groups=%s&limit=1", spotifyID, albumType)
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-
-		if err != nil {
-			log.Printf("failed to get albums: %v", err)
-			return nil, err
-		}
-		defer resp.Body.Close()
-
 		var releasesReponse struct {
 			Items []struct {
 				Name        string `json:"name"`
@@ -138,16 +117,15 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 				SpotifyID   string `json:"id"`
 			} `json:"items"`
 		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&releasesReponse); err != nil {
-			log.Printf("failed to decode album response: %v", err)
+		endpoint := fmt.Sprintf("artists/%s/albums?include_groups=%s&limit=1", spotifyID, albumType)
+		if err := ss.makeSpotifyRequest(endpoint, &releasesReponse); err != nil {
 			return nil, err
 		}
 
 		if len(releasesReponse.Items) > 0 {
 			releaseDate, _ := time.Parse("2006-01-02", releasesReponse.Items[0].ReleaseDate)
-			if latestRelease == nil || releaseDate.After(latestRelease.ReleaseDate) {
-				latestRelease = &SpotifyRelease{
+			if releaseDate.After(latestRelease.ReleaseDate) {
+				latestRelease = SpotifyRelease{
 					Name:        releasesReponse.Items[0].Name,
 					ReleaseDate: releaseDate,
 					SpotifyID:   releasesReponse.Items[0].SpotifyID,
@@ -156,33 +134,26 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 		}
 	}
 
-	return latestRelease, nil
+	return &latestRelease, nil
 }
 
 func (ss *SpotifyService) FindAlbum(spotifyID string) (map[string]string, error) {
-	token := getSpotifyToken()
-
-	url := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", spotifyID)
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("Authorization", "Bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-
-	if err != nil {
-		log.Printf("failed to get track: %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
 	var track struct {
 		ExternalURL map[string]string `json:"external_urls"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&track); err != nil {
-		log.Printf("failed to decode track: %v", err)
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("albums/%s", spotifyID), &track); err != nil {
 		return nil, err
 	}
 
 	return track.ExternalURL, nil
+}
+
+func (ss *SpotifyService) ExtractSpotifyID(spotifyURL string) string {
+	re := regexp.MustCompile(`spotify\.com/artist/([0-9a-zA-Z]+)`)
+	matches := re.FindStringSubmatch(spotifyURL)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
