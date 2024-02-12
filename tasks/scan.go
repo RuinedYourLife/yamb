@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -83,16 +82,39 @@ func postNewRelease(s *discordgo.Session, release models.LatestRelease) {
 	}
 
 	spotifyService := services.NewSpotifyService()
-	albumURL, err := spotifyService.FindAlbum(release.SpotifyID)
+	albumDetails, err := spotifyService.FindAlbumDetails(release.SpotifyID)
 	if err != nil {
 		log.Printf("failed to get album for release id %d: %v", release.ID, err)
 	}
 
 	channelID := os.Getenv("YAMB_CHANNEL_ID")
-	message := fmt.Sprintf("New release from %s: %s - %s", artist.Name, release.Name, albumURL["spotify"])
 
-	_, err = s.ChannelMessageSend(channelID, message)
+	embed := &discordgo.MessageEmbed{
+		Title: release.Name,
+		URL:   albumDetails["spotifyURL"],
+		Color: 0xD4AF91,
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   "Artist",
+				Value:  artist.Name,
+				Inline: true,
+			},
+			{
+				Name:   "Release Date",
+				Value:  release.ReleaseDate.Format("02/01/2006"),
+				Inline: true,
+			},
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: albumDetails["artistImageURL"],
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: albumDetails["imageURL"],
+		},
+	}
+
+	_, err = s.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
-		log.Printf("failed to send message for release id %d: %v", release.ID, err)
+		log.Printf("failed to send embed for release id %d: %v", release.ID, err)
 	}
 }

@@ -15,7 +15,10 @@ import (
 type SpotifyService struct{}
 
 type SpotifyArtist struct {
-	Name      string `json:"name"`
+	Name   string `json:"name"`
+	Images []struct {
+		URL string `json:"url"`
+	} `json:"images"`
 	SpotifyID string `json:"id"`
 }
 
@@ -85,9 +88,13 @@ func (ss *SpotifyService) makeSpotifyRequest(endpoint string, result interface{}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("failed to execute request: %v", err)
+		return fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received non-ok http status code: %s", resp.Status)
+	}
 
 	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return fmt.Errorf("failed to decode response: %w", err)
@@ -99,6 +106,7 @@ func (ss *SpotifyService) makeSpotifyRequest(endpoint string, result interface{}
 func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, error) {
 	var artist SpotifyArtist
 	if err := ss.makeSpotifyRequest(fmt.Sprintf("artists/%s", spotifyID), &artist); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -119,6 +127,7 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 		}
 		endpoint := fmt.Sprintf("artists/%s/albums?include_groups=%s&limit=1", spotifyID, albumType)
 		if err := ss.makeSpotifyRequest(endpoint, &releasesReponse); err != nil {
+			log.Println(err)
 			return nil, err
 		}
 
@@ -137,16 +146,44 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 	return &latestRelease, nil
 }
 
-func (ss *SpotifyService) FindAlbum(spotifyID string) (map[string]string, error) {
-	var track struct {
+func (ss *SpotifyService) FindAlbumDetails(spotifyID string) (map[string]string, error) {
+	var albumDetails struct {
 		ExternalURL map[string]string `json:"external_urls"`
+		Artists     []struct {
+			ID string `json:"id"`
+		} `json:"artists"`
+		Images []struct {
+			URL string `json:"url"`
+		} `json:"images"`
 	}
 
-	if err := ss.makeSpotifyRequest(fmt.Sprintf("albums/%s", spotifyID), &track); err != nil {
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("albums/%s", spotifyID), &albumDetails); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
-	return track.ExternalURL, nil
+	result := map[string]string{
+		"spotifyURL": albumDetails.ExternalURL["spotify"],
+	}
+
+	if len(albumDetails.Images) > 0 {
+		result["imageURL"] = albumDetails.Images[0].URL
+	}
+
+	if len(albumDetails.Artists) > 0 {
+		artistID := albumDetails.Artists[0].ID
+
+		artistDetails, err := ss.FindArtistDetails(artistID)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(artistDetails.Images) > 0 {
+			result["artistImageURL"] = artistDetails.Images[0].URL
+		}
+	}
+
+	return result, nil
 }
 
 func (ss *SpotifyService) ExtractSpotifyID(spotifyURL string) string {
