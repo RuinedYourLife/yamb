@@ -7,5 +7,5 @@ type AlreadyTrackedError struct {
 }
 
 func (e *AlreadyTrackedError) Error() string {
-	return fmt.Sprintf("%s is already being tracked.", e.Entity)
+	return fmt.Sprintf("%s is already being tracked", e.Entity)
 }
