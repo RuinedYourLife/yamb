@@ -10,6 +10,6 @@ type LatestRelease struct {
 	gorm.Model
 	Name        string    `gorm:"not null"`
 	ReleaseDate time.Time `gorm:"not null"`
-	SpotifyID   string    `gorm:"not null;unique"`
+	SpotifyID   string    `gorm:"not null"`
 	ArtistID    uint      `gorm:"not null;uniqueIndex"`
 }
