@@ -14,19 +14,19 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	spotifyService := services.NewSpotifyService()
 	spotifyID := spotifyService.ExtractSpotifyID(spotifyURL)
 	if spotifyID == "" || len(spotifyID) != 22 {
-		sendErrorReply(s, i, "Invalid Spotify URL provided")
+		SendErrorReply(s, i, "Invalid Spotify URL provided")
 		return
 	}
 
 	artistDetails, err := spotifyService.FindArtistDetails(spotifyID)
 	if err != nil {
-		sendErrorReply(s, i, "Could not find artist details for this URL")
+		SendErrorReply(s, i, "Could not find artist details for this URL")
 		return
 	}
 
 	latestRelease, err := spotifyService.FindArtistLatestRelease(spotifyID)
 	if err != nil {
-		sendErrorReply(s, i, "Could not find latest release for this artist")
+		SendErrorReply(s, i, "Could not find latest release for this artist")
 		return
 	}
 
@@ -39,14 +39,14 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			content = e.Error()
 		}
 
-		sendErrorReply(s, i, content)
+		SendErrorReply(s, i, content)
 		return
 	}
 
 	releaseService := services.NewLatestReleaseService()
 	err = releaseService.Create(latestRelease.Name, latestRelease.ReleaseDate, latestRelease.SpotifyID, artistID)
 	if err != nil {
-		sendErrorReply(s, i, "Could not register latest release for this artist")
+		SendErrorReply(s, i, "Could not register latest release for this artist")
 		return
 	}
 
@@ -62,20 +62,6 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 					Thumbnail: &discordgo.MessageEmbedThumbnail{
 						URL: artistDetails.Images[0].URL,
 					},
-				},
-			},
-		},
-	})
-}
-
-func sendErrorReply(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{
-				{
-					Description: message,
-					Color:       0xBD5773,
 				},
 			},
 		},

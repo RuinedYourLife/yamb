@@ -20,7 +20,13 @@ var (
 
 func init() { flag.Parse() }
 
-func Init() { db.Init() }
+func Init() {
+	db.Init()
+	err := os.MkdirAll(os.Getenv("YAMB_DOWNLOAD_DIR"), os.ModeDir)
+	if err != nil {
+		log.Fatalf("failed to create download dir: %v", err)
+	}
+}
 
 func Run(session *discordgo.Session) {
 	go tasks.ProcessArtistCheckQueue(session)
