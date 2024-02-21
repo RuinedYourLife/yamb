@@ -24,11 +24,30 @@ var (
 			Name:        "scan",
 			Description: "Scan for new releases for all artists",
 		},
+		{
+			Name:        "dl",
+			Description: "Download a specific release or a playlist",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "spotify-url",
+					Description: "Spotify URL for the release or playlist",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        "ordered",
+					Description: "Prefixes the filename with its index in the playlist",
+					Required:    true,
+				},
+			},
+		},
 	}
 
 	command_handlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"track": TrackCommandHandler,
 		"scan":  ScanCommandHandler,
+		"dl":    DownloadCommandHandler,
 	}
 )
 
