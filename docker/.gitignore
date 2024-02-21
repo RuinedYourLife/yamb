@@ -1,2 +1,4 @@
 app.env
+app.dev.env
 db.env
+db.dev.env

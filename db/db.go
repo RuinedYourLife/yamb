@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ruined.yamb/v1/models"
+	"github.com/ruined/yamb/v1/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

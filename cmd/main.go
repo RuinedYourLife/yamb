@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ruined.yamb/v1/app"
-	"github.com/ruined.yamb/v1/handlers"
+	"github.com/ruined/yamb/v1/app"
+	"github.com/ruined/yamb/v1/handlers"
 )
 
 func main() {

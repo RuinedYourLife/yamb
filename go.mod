@@ -1,9 +1,15 @@
-module github.com/ruined.yamb/v1
+module github.com/ruined/yamb/v1
 
 go 1.22
 
 require (
-	github.com/bwmarrin/discordgo v0.27.1 // indirect
+	github.com/bwmarrin/discordgo v0.27.1
+	github.com/robfig/cron/v3 v3.0.1
+	gorm.io/driver/postgres v1.5.6
+	gorm.io/gorm v1.25.7
+)
+
+require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
@@ -11,11 +17,8 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	gorm.io/driver/postgres v1.5.6 // indirect
-	gorm.io/gorm v1.25.7 // indirect
 )

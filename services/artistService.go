@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 
-	"github.com/ruined.yamb/v1/db"
-	"github.com/ruined.yamb/v1/models"
-	"github.com/ruined.yamb/v1/yamberrors"
+	"github.com/ruined/yamb/v1/db"
+	"github.com/ruined/yamb/v1/models"
+	"github.com/ruined/yamb/v1/yamberrors"
 	"gorm.io/gorm"
 )
 
