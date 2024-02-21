@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ruined.yamb/v1/tasks"
+	"github.com/ruined/yamb/v1/tasks"
 )
 
 func ScanCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

@@ -3,8 +3,8 @@ package services
 import (
 	"time"
 
-	"github.com/ruined.yamb/v1/db"
-	"github.com/ruined.yamb/v1/models"
+	"github.com/ruined/yamb/v1/db"
+	"github.com/ruined/yamb/v1/models"
 )
 
 type LatestReleaseService struct{}

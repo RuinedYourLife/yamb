@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ruined.yamb/v1/models"
-	"github.com/ruined.yamb/v1/services"
+	"github.com/ruined/yamb/v1/models"
+	"github.com/ruined/yamb/v1/services"
 )
 
 type ArtistCheckTask struct {

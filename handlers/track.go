@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ruined.yamb/v1/services"
-	"github.com/ruined.yamb/v1/yamberrors"
+	"github.com/ruined/yamb/v1/services"
+	"github.com/ruined/yamb/v1/yamberrors"
 )
 
 func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {

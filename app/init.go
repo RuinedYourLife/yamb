@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ruined.yamb/v1/db"
-	"github.com/ruined.yamb/v1/tasks"
+	"github.com/ruined/yamb/v1/db"
+	"github.com/ruined/yamb/v1/tasks"
 )
 
 var (
