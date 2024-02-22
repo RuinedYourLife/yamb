@@ -21,8 +21,8 @@ func ScanCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	go ScanForReleases()
 
 	err := ReplyEmbed(s, i, &discordgo.MessageEmbed{
-		Title:       "Scan",
-		Description: "Checking for new releases...",
+		Title:       "Scanning",
+		Description: "Please wait...",
 		Color:       0xD4AF91,
 	})
 
