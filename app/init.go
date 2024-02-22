@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ruined/yamb/v1/db"
+	"github.com/ruined/yamb/v1/handlers"
 	"github.com/ruined/yamb/v1/tasks"
 )
 
@@ -29,7 +30,7 @@ func Init() {
 }
 
 func Run(session *discordgo.Session) {
-	go tasks.ProcessArtistCheckQueue(session)
+	go handlers.ProcessArtistCheckQueue(session)
 	tasks.SetupCronJob()
 
 	log.Println("[+] hello (:")

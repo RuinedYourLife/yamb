@@ -12,21 +12,21 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	spotifyURL := i.ApplicationCommandData().Options[0].StringValue()
 
 	spotifyService := services.NewSpotifyService()
-	spotifyID := spotifyService.ExtractSpotifyID(spotifyURL)
+	_, spotifyID := spotifyService.ExtractSpotifyInfos(spotifyURL)
 	if spotifyID == "" || len(spotifyID) != 22 {
-		SendErrorReply(s, i, "Invalid Spotify URL provided")
+		ReplyErrorEmbed(s, i, "Invalid Spotify URL provided")
 		return
 	}
 
-	artistDetails, err := spotifyService.FindArtistDetails(spotifyID)
+	artistDetails, err := spotifyService.FetchArtistDetails(spotifyID)
 	if err != nil {
-		SendErrorReply(s, i, "Could not find artist details for this URL")
+		ReplyErrorEmbed(s, i, "Could not find artist details for this URL")
 		return
 	}
 
-	latestRelease, err := spotifyService.FindArtistLatestRelease(spotifyID)
+	latestRelease, err := spotifyService.FetchArtistLatestRelease(spotifyID)
 	if err != nil {
-		SendErrorReply(s, i, "Could not find latest release for this artist")
+		ReplyErrorEmbed(s, i, "Could not find latest release for this artist")
 		return
 	}
 
@@ -39,31 +39,27 @@ func TrackCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			content = e.Error()
 		}
 
-		SendErrorReply(s, i, content)
+		ReplyErrorEmbed(s, i, content)
 		return
 	}
 
 	releaseService := services.NewLatestReleaseService()
 	err = releaseService.Create(latestRelease.Name, latestRelease.ReleaseDate, latestRelease.SpotifyID, artistID)
 	if err != nil {
-		SendErrorReply(s, i, "Could not register latest release for this artist")
+		ReplyErrorEmbed(s, i, "Could not register latest release for this artist")
 		return
 	}
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       artistDetails.Name,
-					URL:         fmt.Sprintf("https://open.spotify.com/artist/%s", artistDetails.SpotifyID),
-					Description: "is now being tracked",
-					Color:       0xD4AF91,
-					Thumbnail: &discordgo.MessageEmbedThumbnail{
-						URL: artistDetails.Images[0].URL,
-					},
-				},
-			},
+	err = ReplyEmbed(s, i, &discordgo.MessageEmbed{
+		Title:       artistDetails.Name,
+		URL:         fmt.Sprintf("https://open.spotify.com/artist/%s", artistDetails.SpotifyID),
+		Description: "is now being tracked",
+		Color:       0xD4AF91,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: artistDetails.Images[0].URL,
 		},
 	})
+	if err != nil {
+		ReplyErrorEmbed(s, i, "Could not send reply")
+	}
 }

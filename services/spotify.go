@@ -14,6 +14,18 @@ import (
 
 type SpotifyService struct{}
 
+type SpotifyResourceDetails struct {
+	Name           string
+	URL            string
+	ImageURL       string
+	ReleaseDate    string
+	ArtistName     string
+	ArtistImageURL string
+	OwnerName      string
+	OwnerImageURL  string
+	Public         string
+}
+
 type SpotifyArtist struct {
 	Name   string `json:"name"`
 	Images []struct {
@@ -103,7 +115,7 @@ func (ss *SpotifyService) makeSpotifyRequest(endpoint string, result interface{}
 	return nil
 }
 
-func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, error) {
+func (ss *SpotifyService) FetchArtistDetails(spotifyID string) (*SpotifyArtist, error) {
 	var artist SpotifyArtist
 	if err := ss.makeSpotifyRequest(fmt.Sprintf("artists/%s", spotifyID), &artist); err != nil {
 		log.Println(err)
@@ -113,7 +125,7 @@ func (ss *SpotifyService) FindArtistDetails(spotifyID string) (*SpotifyArtist, e
 	return &artist, nil
 }
 
-func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRelease, error) {
+func (ss *SpotifyService) FetchArtistLatestRelease(spotifyID string) (*SpotifyRelease, error) {
 	albumTypes := []string{"album", "single", "appears_on"}
 	var latestRelease SpotifyRelease
 
@@ -146,8 +158,9 @@ func (ss *SpotifyService) FindArtistLatestRelease(spotifyID string) (*SpotifyRel
 	return &latestRelease, nil
 }
 
-func (ss *SpotifyService) FindAlbumDetails(spotifyID string) (map[string]string, error) {
+func (ss *SpotifyService) FetchAlbumDetails(spotifyID string) (*SpotifyResourceDetails, error) {
 	var albumDetails struct {
+		Name        string            `json:"name"`
 		ExternalURL map[string]string `json:"external_urls"`
 		Artists     []struct {
 			ID string `json:"id"`
@@ -155,6 +168,7 @@ func (ss *SpotifyService) FindAlbumDetails(spotifyID string) (map[string]string,
 		Images []struct {
 			URL string `json:"url"`
 		} `json:"images"`
+		ReleaseDate string `json:"release_date"`
 	}
 
 	if err := ss.makeSpotifyRequest(fmt.Sprintf("albums/%s", spotifyID), &albumDetails); err != nil {
@@ -162,35 +176,137 @@ func (ss *SpotifyService) FindAlbumDetails(spotifyID string) (map[string]string,
 		return nil, err
 	}
 
-	result := map[string]string{
-		"spotifyURL": albumDetails.ExternalURL["spotify"],
+	details := &SpotifyResourceDetails{
+		URL:         albumDetails.ExternalURL["spotify"],
+		Name:        albumDetails.Name,
+		ReleaseDate: albumDetails.ReleaseDate,
 	}
 
 	if len(albumDetails.Images) > 0 {
-		result["imageURL"] = albumDetails.Images[0].URL
+		details.ImageURL = albumDetails.Images[0].URL
 	}
 
 	if len(albumDetails.Artists) > 0 {
 		artistID := albumDetails.Artists[0].ID
+		artistDetails, err := ss.FetchArtistDetails(artistID)
+		if err != nil {
+			return nil, err
+		}
+		details.ArtistName = artistDetails.Name
+		if len(artistDetails.Images) > 0 {
+			details.ArtistImageURL = artistDetails.Images[0].URL
+		}
+	}
 
-		artistDetails, err := ss.FindArtistDetails(artistID)
+	return details, nil
+}
+
+func (ss *SpotifyService) FetchTrackDetails(spotifyID string) (*SpotifyResourceDetails, error) {
+	var trackDetails struct {
+		ExternalURL map[string]string `json:"external_urls"`
+		Artists     []struct {
+			ID string `json:"id"`
+		} `json:"artists"`
+		Album struct {
+			Images []struct {
+				URL string `json:"url"`
+			} `json:"images"`
+			ReleaseDate string `json:"release_date"`
+		} `json:"album"`
+		Name string `json:"name"`
+	}
+
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("tracks/%s", spotifyID), &trackDetails); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	details := &SpotifyResourceDetails{
+		URL:         trackDetails.ExternalURL["spotify"],
+		Name:        trackDetails.Name,
+		ReleaseDate: trackDetails.Album.ReleaseDate,
+	}
+
+	if len(trackDetails.Album.Images) > 0 {
+		details.ImageURL = trackDetails.Album.Images[0].URL
+	}
+
+	if len(trackDetails.Artists) > 0 {
+		artistID := trackDetails.Artists[0].ID
+
+		artistDetails, err := ss.FetchArtistDetails(artistID)
 		if err != nil {
 			return nil, err
 		}
 
+		details.ArtistName = artistDetails.Name
+
 		if len(artistDetails.Images) > 0 {
-			result["artistImageURL"] = artistDetails.Images[0].URL
+			details.ArtistImageURL = artistDetails.Images[0].URL
 		}
 	}
 
-	return result, nil
+	return details, nil
 }
 
-func (ss *SpotifyService) ExtractSpotifyID(spotifyURL string) string {
-	re := regexp.MustCompile(`spotify\.com/artist/([0-9a-zA-Z]+)`)
-	matches := re.FindStringSubmatch(spotifyURL)
-	if len(matches) > 1 {
-		return matches[1]
+func (ss *SpotifyService) FetchPlaylistDetails(spotifyID string) (*SpotifyResourceDetails, error) {
+	var playlistDetails struct {
+		ExternalURL map[string]string `json:"external_urls"`
+		Images      []struct {
+			URL string `json:"url"`
+		} `json:"images"`
+		Name  string `json:"name"`
+		Owner struct {
+			DisplayName string            `json:"display_name"`
+			ExternalURL map[string]string `json:"external_urls"`
+			ID          string            `json:"id"`
+		} `json:"owner"`
+		Public bool `json:"public"`
 	}
-	return ""
+
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("playlists/%s", spotifyID), &playlistDetails); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	details := &SpotifyResourceDetails{
+		URL:       playlistDetails.ExternalURL["spotify"],
+		Name:      playlistDetails.Name,
+		OwnerName: playlistDetails.Owner.DisplayName,
+		Public:    "No",
+	}
+
+	if playlistDetails.Public {
+		details.Public = "Yes"
+	}
+
+	if len(playlistDetails.Images) > 0 {
+		details.ImageURL = playlistDetails.Images[0].URL
+	}
+
+	var ownerDetails struct {
+		Images []struct {
+			URL string `json:"url"`
+		} `json:"images"`
+	}
+
+	if err := ss.makeSpotifyRequest(fmt.Sprintf("users/%s", playlistDetails.Owner.ID), &ownerDetails); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if len(ownerDetails.Images) > 0 {
+		details.OwnerImageURL = ownerDetails.Images[0].URL
+	}
+
+	return details, nil
+}
+
+func (ss *SpotifyService) ExtractSpotifyInfos(spotifyURL string) (string, string) {
+	re := regexp.MustCompile(`spotify\.com/(\w+)/([0-9a-zA-Z]+)`)
+	matches := re.FindStringSubmatch(spotifyURL)
+	if len(matches) > 2 {
+		return matches[1], matches[2]
+	}
+	return "", ""
 }

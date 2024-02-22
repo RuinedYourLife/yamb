@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/creack/pty"
+	"github.com/ruined/yamb/v1/services"
+	"github.com/ruined/yamb/v1/util"
 )
 
 func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -18,20 +21,27 @@ func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 		Color:       0xD4AF91,
 	}
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
-	})
+	err := ReplyEmbed(s, i, embed)
+	if err != nil {
+		SendErrorEmbed(s, os.Getenv("YAMB_CHANNEL_ID"), "Could not start download")
+		return
+	}
 
-	url := i.ApplicationCommandData().Options[0].StringValue()
-	ordered := i.ApplicationCommandData().Options[1].BoolValue()
+	url := ""
+	ordered := false
+
+	for _, option := range i.ApplicationCommandData().Options {
+		if option.Name == "spotify-url" {
+			url = option.StringValue()
+		} else if option.Name == "ordered" && option.Type == discordgo.ApplicationCommandOptionBoolean {
+			ordered = option.BoolValue()
+		}
+	}
 
 	go func() {
 		err := spotifyDL(s, i, embed, url, ordered)
 		if err != nil {
-			SendErrorReply(s, i, "Could not use spotify-dl")
+			ReplyErrorEmbed(s, i, "Could not use spotify-dl")
 			return
 		}
 	}()
@@ -50,43 +60,113 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 	}
 
 	cmd := exec.Command(cmdName, args...)
-	stdout, _ := cmd.StdoutPipe()
-	cmd.Start()
 
-	scanner := bufio.NewScanner(stdout)
-	var outputLines []string
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		log.Printf("[+] spotify-dl failed to start: %v", err)
+		return err
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	scanner := bufio.NewScanner(ptmx)
+
 	for scanner.Scan() {
-		outputLines = append(outputLines, scanner.Text())
-		if len(outputLines) > 3 {
-			outputLines = outputLines[len(outputLines)-3:]
+		line := util.StripANSICodes(scanner.Text())
+		if strings.Contains(line, "Adding all songs from") {
+			continue
 		}
 
-		content := strings.Join(outputLines, "\n")
-
-		e.Description = "```" + content + "```"
-		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Embeds: &[]*discordgo.MessageEmbed{e},
-		})
+		e.Description = "```" + line + "```"
+		err := UpdateEmbed(s, i, e)
 		if err != nil {
-			e.Description = "Something went wrong"
-			e.Color = 0xBD5773
-			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Embeds: []*discordgo.MessageEmbed{e},
-			})
 			return err
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[+] spotify-dl fail: %v\noutput", err)
+		log.Printf("[+] spotify-dl failed to execute: %v", err)
 		return err
 	}
 
-	e.Description = "Completed"
-	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-		Embeds: &[]*discordgo.MessageEmbed{e},
-	})
+	postDownloadedResource(s, i, e, url)
+
+	return nil
+}
+
+func postDownloadedResource(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, url string) error {
+	spotifyService := services.NewSpotifyService()
+	resourceType, resourceID := spotifyService.ExtractSpotifyInfos(url)
+
+	var details *services.SpotifyResourceDetails
+	var err error
+
+	switch resourceType {
+	case "album":
+		details, err = spotifyService.FetchAlbumDetails(resourceID)
+	case "track":
+		details, err = spotifyService.FetchTrackDetails(resourceID)
+	case "playlist":
+		details, err = spotifyService.FetchPlaylistDetails(resourceID)
+	}
+
+	if err != nil {
+		ReplyErrorEmbed(s, i, "Could not find details for this URL")
+	}
+
+	fields := []*discordgo.MessageEmbedField{}
+	if details.ArtistName != "" {
+		fields = append(fields, &discordgo.MessageEmbedField{
+			Name:   "Artist",
+			Value:  details.ArtistName,
+			Inline: true,
+		})
+	}
+	if details.ReleaseDate != "" {
+		fields = append(fields, &discordgo.MessageEmbedField{
+			Name:   "Release Date",
+			Value:  details.ReleaseDate,
+			Inline: true,
+		})
+	}
+	if details.OwnerName != "" {
+		fields = append(fields, &discordgo.MessageEmbedField{
+			Name:   "Owner",
+			Value:  details.OwnerName,
+			Inline: true,
+		})
+	}
+	if details.Public != "" {
+		fields = append(fields, &discordgo.MessageEmbedField{
+			Name:   "Public",
+			Value:  details.Public,
+			Inline: true,
+		})
+	}
+	if details.ArtistImageURL != "" {
+		e.Thumbnail = &discordgo.MessageEmbedThumbnail{
+			URL: details.ArtistImageURL,
+		}
+	}
+	if details.OwnerImageURL != "" {
+		e.Thumbnail = &discordgo.MessageEmbedThumbnail{
+			URL: details.OwnerImageURL,
+		}
+	}
+
+	e.Description = ""
+	e.Title = details.Name
+	e.URL = details.URL
+	e.Color = 0xD4AF91
+	e.Fields = fields
+	e.Image = &discordgo.MessageEmbedImage{
+		URL: details.ImageURL,
+	}
+
+	err = UpdateEmbed(s, i, e)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

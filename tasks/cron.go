@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/robfig/cron/v3"
+	"github.com/ruined/yamb/v1/handlers"
 )
 
 var (
@@ -11,7 +12,7 @@ var (
 )
 
 func SetupCronJob() {
-	_, err := c.AddFunc("0 0 9 * * *", ScanForReleases)
+	_, err := c.AddFunc("0 0 9 * * *", handlers.ScanForReleases)
 
 	if err != nil {
 		log.Fatalf("failed to add cron job: %v", err)
