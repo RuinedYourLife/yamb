@@ -15,3 +15,10 @@ func SendErrorReply(s *discordgo.Session, i *discordgo.InteractionCreate, messag
 		},
 	})
 }
+
+func UpdateEmbedDescription(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, description string) {
+	e.Description = description
+	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{e},
+	})
+}

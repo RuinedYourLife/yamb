@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/creack/pty"
+	"github.com/ruined/yamb/v1/util"
 )
 
 func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -50,43 +52,32 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 	}
 
 	cmd := exec.Command(cmdName, args...)
-	stdout, _ := cmd.StdoutPipe()
-	cmd.Start()
 
-	scanner := bufio.NewScanner(stdout)
-	var outputLines []string
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		log.Printf("[+] spotify-dl failed to start: %v", err)
+		return err
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	scanner := bufio.NewScanner(ptmx)
+
 	for scanner.Scan() {
-		outputLines = append(outputLines, scanner.Text())
-		if len(outputLines) > 3 {
-			outputLines = outputLines[len(outputLines)-3:]
+		line := util.StripANSICodes(scanner.Text())
+		if strings.Contains(line, "Adding all songs from") {
+			continue
 		}
 
-		content := strings.Join(outputLines, "\n")
-
-		e.Description = "```" + content + "```"
-		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Embeds: &[]*discordgo.MessageEmbed{e},
-		})
-		if err != nil {
-			e.Description = "Something went wrong"
-			e.Color = 0xBD5773
-			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Embeds: []*discordgo.MessageEmbed{e},
-			})
-			return err
-		}
-		time.Sleep(1 * time.Second)
+		UpdateEmbedDescription(s, i, e, "```"+line+"```")
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[+] spotify-dl fail: %v\noutput", err)
+		log.Printf("[+] spotify-dl failed to execute: %v", err)
 		return err
 	}
 
-	e.Description = "Completed"
-	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-		Embeds: &[]*discordgo.MessageEmbed{e},
-	})
+	UpdateEmbedDescription(s, i, e, "Completed")
 
 	return nil
 }
