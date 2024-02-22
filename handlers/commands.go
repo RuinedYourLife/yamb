@@ -37,8 +37,8 @@ var (
 				{
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        "ordered",
-					Description: "Prefixes the filename with its index in the playlist",
-					Required:    true,
+					Description: "Prefixes the filename with its index in the playlist (default: false)",
+					Required:    false,
 				},
 			},
 		},
