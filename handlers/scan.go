@@ -130,6 +130,6 @@ func postNewRelease(s *discordgo.Session, artistID uint, releaseName string, rel
 
 	err = SendEmbed(s, channelID, embed)
 	if err != nil {
-		log.Printf("failed to send embed for release id %s: %v", releaseID, err)
+		SendErrorEmbed(s, channelID, "Could not send new release")
 	}
 }
