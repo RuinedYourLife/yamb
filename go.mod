@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/bwmarrin/discordgo v0.27.1
+	github.com/creack/pty v1.1.21
 	github.com/robfig/cron/v3 v3.0.1
 	gorm.io/driver/postgres v1.5.6
 	gorm.io/gorm v1.25.7
