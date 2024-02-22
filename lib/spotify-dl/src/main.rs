@@ -222,6 +222,18 @@ async fn main() {
                         println!("Unsupported track {}", &track_url);
                     }
                 }
+                match Album::get(&session, track).await {
+                    Ok(mut album) => {
+                        println!(
+                            "Adding all songs from album {} (by {:?}) to the queue",
+                            &album.name, &album.artists
+                        );
+                        tracks.append(&mut album.tracks);
+                    }
+                    Err(_) => {
+                        println!("Unsupported track {}", &track_url);
+                    }
+                }
             }
         }
     }
