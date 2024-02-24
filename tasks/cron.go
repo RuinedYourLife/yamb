@@ -12,7 +12,10 @@ var (
 )
 
 func SetupCronJob() {
-	_, err := c.AddFunc("0 0 9 * * *", handlers.ScanForReleases)
+	_, err := c.AddFunc("0 0 9 * * *", func() {
+		log.Println("[+] daily scan")
+		handlers.ScanForReleases(nil)
+	})
 
 	if err != nil {
 		log.Fatalf("failed to add cron job: %v", err)

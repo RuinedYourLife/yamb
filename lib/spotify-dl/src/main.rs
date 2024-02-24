@@ -91,7 +91,7 @@ async fn download_tracks(
 ) {
     let player_config = PlayerConfig::default();
     let bar_style = ProgressStyle::default_bar()
-        .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} (ETA: {eta}) {msg}")
+        .template("[{elapsed_precise}] [{bar:38.cyan/blue}] {pos}/{len:5} (ETA: {eta}) {msg}")
         .progress_chars("##-");
     let bar = ProgressBar::new(tracks.len() as u64);
     bar.set_style(bar_style);

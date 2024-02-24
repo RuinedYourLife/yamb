@@ -16,7 +16,7 @@ import (
 
 func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
-		Title:       "Download",
+		Title:       "Downloading",
 		Description: "Starting",
 		Color:       0xD4AF91,
 	}
