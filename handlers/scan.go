@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -11,14 +13,23 @@ import (
 )
 
 type ArtistCheckTask struct {
-	ArtistID  uint
-	SpotifyID string
+	ArtistID    uint
+	ArtistName  string
+	SpotifyID   string
+	Interaction *discordgo.InteractionCreate
 }
 
 var artistCheckQueue = make(chan ArtistCheckTask, 100)
 
+var startTime time.Time
+var processedArtists int
+var artistCount int
+
 func ScanCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	go ScanForReleases()
+	go ScanForReleases(i)
+
+	startTime = time.Now()
+	processedArtists = 0
 
 	err := ReplyEmbed(s, i, &discordgo.MessageEmbed{
 		Title:       "Scanning",
@@ -32,19 +43,21 @@ func ScanCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func ScanForReleases() {
+func ScanForReleases(i *discordgo.InteractionCreate) {
 	artistService := services.NewArtistService()
-
 	artists, err := artistService.GetAll()
 	if err != nil {
 		log.Printf("failed to get all artists: %v", err)
 		return
 	}
+	artistCount = len(artists)
 
 	for _, artist := range artists {
 		artistCheckQueue <- ArtistCheckTask{
-			ArtistID:  artist.ID,
-			SpotifyID: artist.SpotifyID,
+			ArtistID:    artist.ID,
+			ArtistName:  artist.Name,
+			SpotifyID:   artist.SpotifyID,
+			Interaction: i,
 		}
 	}
 }
@@ -52,8 +65,48 @@ func ScanForReleases() {
 func ProcessArtistCheckQueue(s *discordgo.Session) {
 	for task := range artistCheckQueue {
 		processArtistCheckTask(s, task)
+		processedArtists++
+		if task.Interaction != nil {
+			updateProgress(s, task, time.Since(startTime), processedArtists)
+		}
 		time.Sleep(time.Second)
+
+		if processedArtists == artistCount && task.Interaction != nil {
+			err := UpdateEmbed(s, task.Interaction, &discordgo.MessageEmbed{
+				Title:       "Scanning",
+				Description: "Complete",
+				Color:       0xD4AF91,
+			})
+			if err != nil {
+				SendErrorEmbed(s, os.Getenv("YAMB_CHANNEL_ID"), "Cannot complete scan for new releases")
+				return
+			}
+		}
 	}
+}
+
+func updateProgress(s *discordgo.Session, task ArtistCheckTask, elapsedTime time.Duration, processedArtists int) {
+	hours, minutes, seconds := elapsedTime.Hours(), elapsedTime.Minutes(), elapsedTime.Seconds()
+	formattedElapsedTime := fmt.Sprintf("%02d:%02d:%02d", int(hours), int(minutes)%60, int(seconds)%60)
+
+	progressBarLength := 38
+	progress := max(0, min(processedArtists*progressBarLength/artistCount, progressBarLength))
+	progressBar := strings.Repeat("#", progress) + strings.Repeat("-", max(0, progressBarLength-progress))
+
+	remaining := max(1, artistCount-processedArtists)
+	eta := elapsedTime / time.Duration(processedArtists) * time.Duration(remaining)
+	formattedEta := eta.Truncate(time.Second).String()
+
+	description := fmt.Sprintf(
+		"[%s] [%s] %d/%d         \n(ETA: %s) %s",
+		formattedElapsedTime, progressBar, processedArtists, artistCount, formattedEta, task.ArtistName,
+	)
+
+	UpdateEmbed(s, task.Interaction, &discordgo.MessageEmbed{
+		Title:       "Scanning",
+		Description: "```" + description + "```",
+		Color:       0xD4AF91,
+	})
 }
 
 func processArtistCheckTask(s *discordgo.Session, task ArtistCheckTask) {
