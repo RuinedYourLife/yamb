@@ -72,7 +72,7 @@ func ProcessArtistCheckQueue(s *discordgo.Session) {
 		time.Sleep(time.Second)
 
 		if processedArtists == artistCount && task.Interaction != nil {
-			err := UpdateEmbed(s, task.Interaction, &discordgo.MessageEmbed{
+			err := UpdateEmbedContent(s, task.Interaction, &discordgo.MessageEmbed{
 				Title:       "Scanning",
 				Description: "Complete",
 				Color:       0xD4AF91,
@@ -102,7 +102,7 @@ func updateProgress(s *discordgo.Session, task ArtistCheckTask, elapsedTime time
 		formattedElapsedTime, progressBar, processedArtists, artistCount, formattedEta, task.ArtistName,
 	)
 
-	UpdateEmbed(s, task.Interaction, &discordgo.MessageEmbed{
+	UpdateEmbedContent(s, task.Interaction, &discordgo.MessageEmbed{
 		Title:       "Scanning",
 		Description: "```" + description + "```",
 		Color:       0xD4AF91,
@@ -138,51 +138,19 @@ func processArtistCheckTask(s *discordgo.Session, task ArtistCheckTask) {
 			log.Printf("failed to update latest release for artist id %d: %v", task.ArtistID, err)
 			return
 		}
-		postNewRelease(s, task.ArtistID, latestRelease.Name, latestRelease.ReleaseDate, latestRelease.SpotifyID)
+		postNewRelease(s, latestRelease.SpotifyID)
 	}
 }
 
-func postNewRelease(s *discordgo.Session, artistID uint, releaseName string, releaseDate time.Time, releaseID string) {
-	artistService := services.NewArtistService()
-	artist, err := artistService.FindByID(artistID)
-	if err != nil {
-		log.Printf("failed to get artist for release id %s: %v", releaseID, err)
-	}
-
+func postNewRelease(s *discordgo.Session, releaseID string) {
 	spotifyService := services.NewSpotifyService()
 	details, err := spotifyService.FetchAlbumDetails(releaseID)
 	if err != nil {
 		log.Printf("failed to get album for release id %s: %v", releaseID, err)
 	}
 
-	channelID := os.Getenv("YAMB_CHANNEL_ID")
-
-	embed := &discordgo.MessageEmbed{
-		Title: releaseName,
-		URL:   details.URL,
-		Color: 0xD4AF91,
-		Fields: []*discordgo.MessageEmbedField{
-			{
-				Name:   "Artist",
-				Value:  artist.Name,
-				Inline: true,
-			},
-			{
-				Name:   "Release Date",
-				Value:  releaseDate.Format("02/01/2006"),
-				Inline: true,
-			},
-		},
-		Thumbnail: &discordgo.MessageEmbedThumbnail{
-			URL: details.ArtistImageURL,
-		},
-		Image: &discordgo.MessageEmbedImage{
-			URL: details.ImageURL,
-		},
-	}
-
-	err = SendEmbed(s, channelID, embed)
+	err = PostSpotifyResource(s, nil, &discordgo.MessageEmbed{}, details, details.URL)
 	if err != nil {
-		SendErrorEmbed(s, channelID, "Could not send new release")
+		SendErrorEmbed(s, os.Getenv("YAMB_CHANNEL_ID"), "Could not post new release")
 	}
 }
