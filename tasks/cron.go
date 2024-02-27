@@ -13,7 +13,6 @@ var (
 
 func SetupCronJob() {
 	_, err := c.AddFunc("0 0 9 * * *", func() {
-		log.Println("[+] daily scan")
 		handlers.ScanForReleases(nil)
 	})
 
