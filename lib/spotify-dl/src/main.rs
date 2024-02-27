@@ -191,7 +191,7 @@ async fn main() {
 
     for track_url in opt.tracks {
         let track = SpotifyId::from_uri(track_url.as_str()).unwrap_or_else(|_| {
-            let regex = Regex::new(r"https://open.spotify.com/(\w+)/(.*)\?").unwrap();
+            let regex = Regex::new(r"https://open.spotify.com/(\w+)/([0-9a-zA-Z]+)").unwrap();
 
             let results = regex.captures(track_url.as_str()).unwrap();
             let uri = format!(
