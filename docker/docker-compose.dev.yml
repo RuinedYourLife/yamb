@@ -11,14 +11,14 @@ services:
       # change context to copy local repo during development
       context: ../
       dockerfile: docker/Dockerfile
-    image: ruined/yamb-bot
+    image: ruined/yamb-dev
     restart: unless-stopped
     depends_on:
       - db
     networks:
       - default
     env_file:
-      - app.env
+      - app.dev.env
 
   db:
     container_name: yamb-db-dev
@@ -29,4 +29,4 @@ services:
     networks:
       - default
     env_file:
-      - db.env
+      - db.dev.env
