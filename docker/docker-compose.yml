@@ -1,0 +1,32 @@
+volumes:
+  db:
+
+networks:
+  default:
+    
+services:
+  app:
+    container_name: yamb-bot-prod
+    build:
+      # change context to copy local repo during development
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: ruined/yamb-prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - default
+    env_file:
+      - app.env
+
+  db:
+    container_name: yamb-db-prod
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks:
+      - default
+    env_file:
+      - db.env
