@@ -37,4 +37,6 @@ COPY --from=rust-builder /libbuild/spotify-dl/target/release/spotify-dl /usr/loc
 
 RUN chmod +x /usr/local/bin/spotify-dl
 
+EXPOSE 3000 5000
+
 ENTRYPOINT [ "/app/yamb" ]

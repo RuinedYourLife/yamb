@@ -51,8 +51,8 @@ func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, url string, ordered bool) error {
-	userID := i.Member.User.ID
-	downloadDir := path.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), userID)
+	username := util.SanitizeLowerString(i.Member.User.Username)
+	downloadDir := path.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), username)
 
 	err := os.MkdirAll(downloadDir, os.ModeDir)
 	if err != nil {
@@ -101,9 +101,15 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 		return err
 	}
 
-	archivePath := filepath.Join(downloadDir, userID+".zip")
+	archivePath := filepath.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), username+".zip")
 	if err := createArchive(downloadDir, archivePath); err != nil {
 		log.Printf("failed to create archive: %v", err)
+		return err
+	}
+
+	err = os.RemoveAll(downloadDir)
+	if err != nil {
+		log.Printf("failed to remove download dir: %v", err)
 		return err
 	}
 
