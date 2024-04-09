@@ -1,10 +1,14 @@
 package handlers
 
 import (
+	"archive/zip"
 	"bufio"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -47,12 +51,21 @@ func DownloadCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, url string, ordered bool) error {
+	username := util.SanitizeLowerString(i.Member.User.Username)
+	downloadDir := path.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), username)
+
+	err := os.MkdirAll(downloadDir, os.ModeDir)
+	if err != nil {
+		log.Printf("failed to create download dir: %v", err)
+		return err
+	}
+
 	cmdName := "spotify-dl"
 	args := []string{
 		"-u", os.Getenv("SPOTIFY_USERNAME"),
 		"-p", os.Getenv("SPOTIFY_PASSWORD"),
 		url,
-		"-d", os.Getenv("YAMB_DOWNLOAD_DIR"),
+		"-d", downloadDir,
 	}
 	if ordered {
 		args = append([]string{"-o"}, args...)
@@ -88,7 +101,70 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 		return err
 	}
 
+	archivePath := filepath.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), username+".zip")
+	if err := createArchive(downloadDir, archivePath); err != nil {
+		log.Printf("failed to create archive: %v", err)
+		return err
+	}
+
+	err = os.RemoveAll(downloadDir)
+	if err != nil {
+		log.Printf("failed to remove download dir: %v", err)
+		return err
+	}
+
 	PostSpotifyResource(s, i, e, nil, url)
 
 	return nil
+}
+
+func createArchive(sourceDir, archivePath string) error {
+	archiveFile, err := os.Create(archivePath)
+	if err != nil {
+		log.Printf("failed to create archive: %v", err)
+		return err
+	}
+	defer archiveFile.Close()
+
+	archive := zip.NewWriter(archiveFile)
+	defer archive.Close()
+
+	err = filepath.Walk(sourceDir, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf("failed to walk through files: %v", err)
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if filePath == archivePath {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(sourceDir, filePath)
+		if err != nil {
+			log.Printf("failed to get relative path: %v", err)
+			return err
+		}
+
+		zipFile, err := archive.Create(relPath)
+		if err != nil {
+			log.Printf("failed to create zip file: %v", err)
+			return err
+		}
+
+		srcFile, err := os.Open(filePath)
+		if err != nil {
+			log.Printf("failed to open source file: %v", err)
+			return err
+		}
+		defer srcFile.Close()
+
+		_, err = io.Copy(zipFile, srcFile)
+		return err
+	})
+
+	return err
 }

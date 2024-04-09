@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/labstack/echo/v4"
 	"github.com/ruined/yamb/v1/app"
 	"github.com/ruined/yamb/v1/handlers"
 )
@@ -24,7 +27,9 @@ func main() {
 
 	handlers.RegisterHandlers(session, *app.GuildID)
 
-	app.Run(session)
+	e := echo.New()
+	e.Static("/", os.Getenv("YAMB_DOWNLOAD_DIR"))
+	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%s", os.Getenv("WEB_SERVER_PORT"))))
 
-	log.Println("[+] yamb ready (:")
+	app.Run(session)
 }

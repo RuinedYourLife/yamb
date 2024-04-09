@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ruined/yamb/v1/services"
+	"github.com/ruined/yamb/v1/util"
 )
 
 func SendEmbed(s *discordgo.Session, channelID string, e *discordgo.MessageEmbed) error {
@@ -59,6 +61,29 @@ func UpdateEmbedContent(s *discordgo.Session, i *discordgo.InteractionCreate, e 
 	return nil
 }
 
+func UpdateEmbedContentWithButton(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, buttonLabel string, buttonUrl string) error {
+	button := discordgo.Button{
+		Label: buttonLabel,
+		Style: discordgo.LinkButton,
+		URL:   buttonUrl,
+	}
+
+	actionRow := discordgo.ActionsRow{
+		Components: []discordgo.MessageComponent{button},
+	}
+
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{e},
+		Components: &[]discordgo.MessageComponent{actionRow},
+	})
+	if err != nil {
+		log.Printf("failed to update embed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func PostSpotifyResource(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, details *services.SpotifyResourceDetails, url string) error {
 	var err error
 	isFromDownload := false
@@ -85,7 +110,8 @@ func PostSpotifyResource(s *discordgo.Session, i *discordgo.InteractionCreate, e
 	updateEmbed(details, e)
 
 	if isFromDownload {
-		err = UpdateEmbedContent(s, i, e)
+		username := util.SanitizeLowerString(i.Member.User.Username)
+		err = UpdateEmbedContentWithButton(s, i, e, "Download", fmt.Sprintf("http://yamb.ruined.fr/%s.zip", username))
 		if err != nil {
 			return err
 		}
