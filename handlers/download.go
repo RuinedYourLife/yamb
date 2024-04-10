@@ -135,15 +135,25 @@ func createArchive(sourceDir, archivePath string) error {
 			return err
 		}
 
-		if info.IsDir() {
+		if info.IsDir() || filePath == archivePath {
 			return nil
 		}
 
-		if filePath == archivePath {
-			return nil
+		outputPath := strings.TrimSuffix(filePath, filepath.Ext(filePath)) + ".mp3"
+		err = convertToMp3(filePath, outputPath)
+		if err != nil {
+			log.Printf("failed to convert to mp3: %v", err)
+			return err
 		}
 
-		relPath, err := filepath.Rel(sourceDir, filePath)
+		srcFile, err := os.Open(outputPath)
+		if err != nil {
+			log.Printf("failed to open source file: %v", err)
+			return err
+		}
+		defer srcFile.Close()
+
+		relPath, err := filepath.Rel(sourceDir, outputPath)
 		if err != nil {
 			log.Printf("failed to get relative path: %v", err)
 			return err
@@ -155,16 +165,32 @@ func createArchive(sourceDir, archivePath string) error {
 			return err
 		}
 
-		srcFile, err := os.Open(filePath)
-		if err != nil {
-			log.Printf("failed to open source file: %v", err)
-			return err
-		}
-		defer srcFile.Close()
-
 		_, err = io.Copy(zipFile, srcFile)
 		return err
 	})
 
 	return err
+}
+
+func convertToMp3(inputPath, outputPath string) error {
+	cmdName := "ffmpeg"
+	args := []string{
+		"-i", inputPath,
+		"-vn",
+		"-ar", "44100",
+		"-ac", "2",
+		"-b:a", "320k",
+		"-f", "mp3",
+		"-map_metadata", "0",
+		"-id3v2_version", "3",
+		outputPath,
+	}
+
+	cmd := exec.Command(cmdName, args...)
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
