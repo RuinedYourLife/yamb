@@ -10,10 +10,12 @@ services:
     build:
       # change context to copy local repo during development
       context: ../
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.dev
     image: ruined/yamb-dev
     ports:
       - "5000:5000"
+    volumes:
+      - ../:/app
     restart: unless-stopped
     depends_on:
       - db
