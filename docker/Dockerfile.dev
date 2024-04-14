@@ -1,0 +1,36 @@
+FROM rust:1.77.2 AS rust-builder
+
+RUN apt-get update && apt-get install -y \
+  cmake \
+  libflac-dev \
+  libasound2-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /libbuild/spotify-dl
+COPY /lib/spotify-dl ./
+RUN cargo build --release && ls -la /libbuild/spotify-dl/target/release
+
+FROM golang:1.22.2
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+  ffmpeg \
+  libflac-dev \
+  libasound2-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN git config --global --add safe.directory /app
+
+COPY --from=rust-builder /libbuild/spotify-dl/target/release/spotify-dl /usr/local/bin/
+RUN chmod +x /usr/local/bin/spotify-dl
+
+RUN ls -la /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+RUN go install -mod=mod github.com/githubnemo/CompileDaemon
+
+EXPOSE 3000 5000
+
+ENTRYPOINT CompileDaemon --build="go build -buildvcs=false -v -o yamb ./cmd" --command="./yamb"
