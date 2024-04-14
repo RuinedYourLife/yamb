@@ -29,24 +29,28 @@ func Init() {
 	}
 }
 
-func Run(session *discordgo.Session) {
+func Run(session *discordgo.Session, cleanup func()) {
 	go handlers.ProcessArtistCheckQueue(session)
 	tasks.SetupCronJob()
 
 	log.Println("[+] hello (:")
 
-	listenSignal()
+	listenSignal(cleanup)
 }
 
-func listenSignal() {
+func listenSignal(cleanup func()) {
 	stop := make(chan os.Signal, 2)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	<-stop
-	shutdown()
+	shutdown(cleanup)
 }
 
-func shutdown() {
+func shutdown(cleanup func()) {
+	if cleanup != nil {
+		cleanup()
+	}
+
 	tasks.StopCronJob()
 
 	time.Sleep(time.Second)
