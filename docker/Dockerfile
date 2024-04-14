@@ -1,4 +1,4 @@
-FROM golang:1.22.0 AS go-builder
+FROM golang:1.22.2 AS go-builder
 
 WORKDIR /appbuild/yamb
 COPY go.mod go.sum ./
@@ -9,7 +9,7 @@ COPY . .
 WORKDIR /appbuild/yamb/cmd
 RUN CGO_ENABLED=0 GOOS=linux go build -v -o yamb
 
-FROM rust:1.76.0 AS rust-builder
+FROM rust:1.77.2 AS rust-builder
 
 RUN apt-get update && apt-get install -y \
   cmake \
