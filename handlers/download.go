@@ -91,6 +91,9 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 		if strings.Contains(line, "Adding all songs from") {
 			continue
 		}
+		if strings.Contains(line, "Unsupported track") {
+			continue
+		}
 
 		e.Description = "```" + line + "```"
 		err := UpdateEmbedContent(s, i, e)
@@ -106,7 +109,7 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 	}
 
 	archivePath := filepath.Join(os.Getenv("YAMB_DOWNLOAD_DIR"), username+".zip")
-	if err := createArchive(downloadDir, archivePath, format); err != nil {
+	if err := createArchive(s, i, e, downloadDir, archivePath, format); err != nil {
 		log.Printf("failed to create archive: %v", err)
 		return err
 	}
@@ -122,7 +125,33 @@ func spotifyDL(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordg
 	return nil
 }
 
-func createArchive(sourceDir, archivePath, format string) error {
+func createArchive(s *discordgo.Session, i *discordgo.InteractionCreate, e *discordgo.MessageEmbed, sourceDir, archivePath, format string) error {
+	filesToProcess := []string{}
+	err := filepath.Walk(sourceDir, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf("failed to walk through files: %v", err)
+			return err
+		}
+
+		if info.IsDir() || filePath == archivePath {
+			return nil
+		}
+
+		if format == "flac" || filepath.Ext(filePath) == ".flac" {
+			filesToProcess = append(filesToProcess, filePath)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("failed to walk through files: %v", err)
+		return err
+	}
+
+	totalFiles := len(filesToProcess)
+	filesProcessed := 0
+
 	archiveFile, err := os.Create(archivePath)
 	if err != nil {
 		log.Printf("failed to create archive: %v", err)
@@ -133,16 +162,7 @@ func createArchive(sourceDir, archivePath, format string) error {
 	archive := zip.NewWriter(archiveFile)
 	defer archive.Close()
 
-	err = filepath.Walk(sourceDir, func(filePath string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Printf("failed to walk through files: %v", err)
-			return err
-		}
-
-		if info.IsDir() || filePath == archivePath {
-			return nil
-		}
-
+	for _, filePath := range filesToProcess {
 		outputPath := ""
 		switch format {
 		case "mp3":
@@ -152,7 +172,7 @@ func createArchive(sourceDir, archivePath, format string) error {
 			outputPath = strings.TrimSuffix(filePath, filepath.Ext(filePath)) + ".wav"
 			err = convertToWav(filePath, outputPath)
 		case "flac":
-			outputPath = strings.TrimSuffix(filePath, filepath.Ext(filePath)) + ".flac"
+			outputPath = filePath
 		default:
 			return fmt.Errorf("unsupported format: %s", format)
 		}
@@ -182,8 +202,18 @@ func createArchive(sourceDir, archivePath, format string) error {
 		}
 
 		_, err = io.Copy(zipFile, srcFile)
-		return err
-	})
+		if err != nil {
+			log.Printf("failed to copy file to zip: %v", err)
+			return err
+		}
+
+		filesProcessed++
+		e.Description = fmt.Sprintf("```Converting & adding files to archive...\n(%d of %d processed)```", filesProcessed, totalFiles)
+		if err := UpdateEmbedContent(s, i, e); err != nil {
+			log.Printf("failed to update conversion embed content: %v", err)
+			return err
+		}
+	}
 
 	return err
 }
@@ -219,8 +249,6 @@ func convertToWav(inputPath, outputPath string) error {
 		"-ar", "44100",
 		"-ac", "2",
 		"-acodec", "pcm_s16le",
-		"-map_metadata", "0",
-		"-id3v2_version", "3",
 		outputPath,
 	}
 
