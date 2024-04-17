@@ -89,7 +89,7 @@ func updateProgress(s *discordgo.Session, task ArtistCheckTask, elapsedTime time
 	hours, minutes, seconds := elapsedTime.Hours(), elapsedTime.Minutes(), elapsedTime.Seconds()
 	formattedElapsedTime := fmt.Sprintf("%02d:%02d:%02d", int(hours), int(minutes)%60, int(seconds)%60)
 
-	progressBarLength := 38
+	progressBarLength := 35
 	progress := max(0, min(processedArtists*progressBarLength/artistCount, progressBarLength))
 	progressBar := strings.Repeat("#", progress) + strings.Repeat("-", max(0, progressBarLength-progress))
 
