@@ -111,7 +111,7 @@ func PostSpotifyResource(s *discordgo.Session, i *discordgo.InteractionCreate, e
 
 	if isFromDownload {
 		username := util.SanitizeLowerString(i.Member.User.Username)
-		err = UpdateEmbedContentWithButton(s, i, e, "Download", fmt.Sprintf("http://yamb.ruined.fr/%s.zip", username))
+		err = UpdateEmbedContentWithButton(s, i, e, "Download", fmt.Sprintf("http://%s/%s.zip", os.Getenv("WEB_SERVER_URL"), username))
 		if err != nil {
 			return err
 		}

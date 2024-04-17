@@ -26,18 +26,29 @@ var (
 		},
 		{
 			Name:        "dl",
-			Description: "Download a specific release or a playlist",
+			Description: "Download a specific resource from Spotify",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "spotify-url",
-					Description: "Spotify URL for the release or playlist",
+					Description: "Spotify URL for the resource to download",
 					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "format",
+					Description: "Format to download the resource in (default: flac)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "flac", Value: "flac"},
+						{Name: "mp3", Value: "mp3"},
+						{Name: "wav", Value: "wav"},
+					},
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        "ordered",
-					Description: "Prefixes the filename with its index in the playlist (default: false)",
+					Description: "Prefixes the filename with its index (default: false)",
 					Required:    false,
 				},
 			},

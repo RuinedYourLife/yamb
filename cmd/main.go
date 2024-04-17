@@ -19,7 +19,6 @@ func main() {
 		log.Fatalf("failed to create discord session: %v", err)
 	}
 
-	defer session.Close()
 	err = session.Open()
 	if err != nil {
 		log.Fatalf("failed to open discord session: %v", err)
@@ -29,7 +28,14 @@ func main() {
 
 	e := echo.New()
 	e.Static("/", os.Getenv("YAMB_DOWNLOAD_DIR"))
-	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%s", os.Getenv("WEB_SERVER_PORT"))))
 
-	app.Run(session)
+	go func() {
+		if err := e.Start(fmt.Sprintf("0.0.0.0:%s", os.Getenv("WEB_SERVER_PORT"))); err != nil {
+			log.Fatalf("failed to start web server: %v", err)
+		}
+	}()
+
+	app.Run(session, func() {
+		session.Close()
+	})
 }
