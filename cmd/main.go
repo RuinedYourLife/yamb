@@ -28,7 +28,12 @@ func main() {
 
 	e := echo.New()
 	e.Static("/", os.Getenv("YAMB_DOWNLOAD_DIR"))
-	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%s", os.Getenv("WEB_SERVER_PORT"))))
+
+	go func() {
+		if err := e.Start(fmt.Sprintf("0.0.0.0:%s", os.Getenv("WEB_SERVER_PORT"))); err != nil {
+			log.Fatalf("failed to start web server: %v", err)
+		}
+	}()
 
 	app.Run(session, func() {
 		session.Close()
